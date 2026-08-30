@@ -1,71 +1,93 @@
 # Deploying MindfulTasks
 
-Version 2 has a server, so **plain GitHub Pages no longer works**. You need a
-host that can run a Node process. Two supported paths:
+Version 2 has a server, so **GitHub Pages no longer works**. You need a host that
+runs a Node process (or a container). A `Dockerfile` is included and is the
+easiest portable option.
+
+The app is one process: it serves the built client and the API on `$PORT`
+(default 8787). It needs a **persistent volume** mounted at `/data` (or set
+`DATABASE_PATH` elsewhere) or the SQLite database resets on every redeploy.
+
+Required env: `NODE_ENV=production`. `PORT` is usually injected by the host.
 
 ---
 
-## Option A — Single Node host (recommended, matches this repo)
+## Fly.io  (has a free volume allowance)
 
-One process serves the built client and the API.
+```bash
+# one-time
+curl -L https://fly.io/install.sh | sh
+fly auth login
 
-**Hosts:** Render, Railway, Fly.io, a small VPS — anything that runs Node 22.5+.
+# from the repo root
+fly launch --no-deploy          # accept the Dockerfile; pick a name/region
+fly volumes create data --size 1
+# ensure fly.toml has:  [mounts]  source = "data"  destination = "/data"
+fly deploy
+```
 
-1. Build command: `npm ci && npm run build`
-2. Start command: `npm start`
-3. Environment:
-   - `NODE_ENV=production`
-   - `PORT` — usually injected by the host
-   - `DATABASE_PATH=/data/mindfultasks.db` — point at a **persistent disk**, or
-     SQLite data is lost on every redeploy/restart.
-4. Attach a persistent volume mounted where `DATABASE_PATH` points.
+`fly.toml` also needs `[env] NODE_ENV = "production"` and the internal port set
+to `8787` (or set `PORT` via `fly secrets`).
 
-Cookies are set `Secure` automatically when `NODE_ENV=production`, so the site
-must be served over HTTPS (all the hosts above do this by default).
+---
 
-### Outgrowing SQLite
+## Render
 
-SQLite on one disk is fine for a single instance. If you need multiple instances
-or managed backups, move to Postgres:
+1. New → **Web Service** → connect this repo.
+2. Runtime: **Docker**. Render reads the `Dockerfile`.
+3. Add env var `NODE_ENV=production`.
+4. Add a **Disk**: mount path `/data`, size 1 GB. *(Disks require a paid
+   instance type; on the free tier the SQLite file is wiped on each deploy —
+   fine for a demo, not for real use.)*
 
-- Add `DATABASE_URL` and a Postgres client (`pg` / `postgres`).
-- Port the table creation in `server/schema.ts` (SQLite → Postgres types:
+---
+
+## Railway
+
+1. New Project → Deploy from repo.
+2. It detects the `Dockerfile`.
+3. Add a **Volume** mounted at `/data`.
+4. Set `NODE_ENV=production`.
+
+---
+
+## Plain VPS / any Node 22.5+ host (no Docker)
+
+```bash
+npm ci
+npm run build
+NODE_ENV=production DATABASE_PATH=/srv/mindfultasks/data.db PORT=8787 npm start
+```
+
+Put it behind a reverse proxy (Caddy/nginx) for TLS. Cookies are `Secure` in
+production, so HTTPS is required.
+
+---
+
+## Outgrowing SQLite (move to Postgres)
+
+SQLite on one disk is fine for a single instance. For multiple instances or
+managed backups:
+
+- Add `DATABASE_URL` + a Postgres client (`pg` / `postgres`).
+- Port the `CREATE TABLE`s in `server/schema.ts` (SQLite → Postgres:
   `INTEGER` booleans → `boolean`, `datetime('now')` → `now()`).
 - Replace the `db.prepare(...).get/all/run` calls in `server/db.ts` and
-  `server/routes/*`. Query shapes are simple and centralised.
+  `server/routes/*` — they're simple and centralised.
 - Nothing in `src/` changes.
 
----
+## Supabase alternative
 
-## Option B — Supabase (managed Postgres + Auth)
-
-If you'd rather not run auth or a database yourself, Supabase replaces both and
-the frontend can stay a static SPA (deployable on Netlify/Vercel, or still a
-Node host).
-
-Rough shape of the change:
-
-1. Create a Supabase project; create `todos` and `meditation_sessions` tables
-   with `user_id uuid references auth.users`, and **row-level security**
-   policies of `user_id = auth.uid()`.
-2. `npm i @supabase/supabase-js`; init a client from `VITE_SUPABASE_URL` /
-   `VITE_SUPABASE_ANON_KEY`.
-3. Replace `src/context/AuthContext.tsx` with Supabase Auth
-   (`signInWithPassword`, `onAuthStateChange`).
-4. Replace the `api.*` calls in `src/hooks/useTodos.ts`,
-   `useMeditationStats.ts` with Supabase queries.
-5. The quote proxy (`server/routes/quote.ts`) becomes a Supabase Edge Function
-   (only needed if you later use a keyed quote provider).
-6. Delete the `server/` directory and the `dev:server` / `build:server` scripts.
-
-The `server/schema.ts` SQL is a good starting point for the Supabase table
-definitions.
+Supabase replaces the server *and* the database, letting the frontend stay a
+static SPA. Rough steps: create `todos` / `meditation_sessions` tables with
+`user_id` + row-level security (`user_id = auth.uid()`); swap `AuthContext` for
+Supabase Auth and the `api.*` calls for Supabase queries; delete `server/`. The
+SQL in `server/schema.ts` is a good starting point for the table definitions.
 
 ---
 
-## Note on `main`
+## About the old GitHub Pages site
 
-`main` still has `.github/workflows/deploy.yml` (GitHub Pages) and
-`base: '/mindfultasks/'` in `vite.config.ts` from v1. When this branch merges,
-that workflow should be removed and replaced with a deploy to whichever host is
-chosen above. `vite.config.ts` here already sets `base: '/'`.
+`https://ssisss1.github.io/mindfultasks/` was the v1 build. The Pages workflow
+was removed on this branch. Take the Pages site down (repo Settings → Pages), or
+leave it until the v2 host is live and then point users at the new URL.
