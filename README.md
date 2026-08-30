@@ -1,100 +1,126 @@
 # MindfulTasks
 
-A calm, single-page productivity dashboard that pairs a simple todo list with a
-short meditation timer. Plan your day, then take a mindful break — all in one
-quiet, distraction-free space.
+A calm productivity dashboard that pairs a simple todo list with a short
+meditation timer. Version 2 adds **user accounts** and **server-side storage**,
+so your tasks follow you between devices and browsers.
 
 ## What it does
 
-MindfulTasks combines two small tools on one responsive dashboard:
+- **Todo list** — capture and track the day's tasks, per account.
+- **Meditation timer** — take a short, focused pause; completed sessions are
+  logged so you can see a 7-day summary.
+- **Daily progress** — a banner showing how much of today you've completed.
+- **A thought to sit with** — a calming quote fetched (server-side) from an
+  external API, with a bundled fallback.
 
-- A **todo list** for capturing and tracking the day's tasks.
-- A **meditation timer** for taking a short, focused pause.
-
-A progress banner at the top shows how much of today you've completed at a
-glance. Everything is stored locally in your browser — no account, no server.
+Everything lives behind a lightweight email + password login. No third-party
+auth, no tracking.
 
 ## Features
 
+### Accounts
+- Register / sign in / sign out (email + password, min 8 chars).
+- Passwords hashed with scrypt; sessions are opaque httpOnly cookies.
+- Each account's data is fully isolated (enforced server-side).
+- On first sign-in, any todos from the old localStorage-only version are
+  migrated into your account automatically.
+
 ### Todo list
-- Add a task with a title.
-- Mark tasks complete / incomplete.
-- Delete tasks.
-- Live counts for **total**, **active**, and **completed** tasks.
-- Tasks persist in `localStorage`, so they survive a page refresh.
+- Add a task, toggle complete / incomplete, delete.
+- Live counts for **total**, **active**, **completed**.
+- Optimistic UI — changes show instantly and reconcile with the server.
 
 ### Meditation
-- Selectable durations: **1, 5, 10, and 15 minutes**.
-- Clear `MM:SS` countdown with a circular progress ring.
-- **Start**, **Pause**, and **Reset** controls.
-- Shows a **"Meditation complete"** message when the timer finishes.
-- No audio, no external APIs.
-
-### Dashboard
-- Clean single-page layout combining both sections in cards/panels.
-- "Today's progress" banner highlighting task completion.
-- Responsive for desktop and mobile.
+- Durations: **1, 5, 10, 15 minutes**, `MM:SS` countdown, progress ring.
+- **Start / Pause / Reset**; a **"Meditation complete"** message at zero.
+- Completed sessions are recorded; the dashboard shows sessions + minutes for
+  the last 7 days.
 
 ## Tech stack
 
-- [Vite](https://vite.dev/) — build tool and dev server
-- [React 18](https://react.dev/) — UI library
-- [TypeScript](https://www.typescriptlang.org/) — typing
-- [Tailwind CSS v3](https://tailwindcss.com/) — styling
-- Browser `localStorage` — persistence
+| Layer     | Choice |
+| --------- | ------ |
+| Frontend  | Vite + React 18 + TypeScript + Tailwind CSS v3 |
+| Backend   | Hono (Node) — a small REST API |
+| Database  | SQLite via Node's built-in `node:sqlite` |
+| Auth      | scrypt password hashing + cookie sessions (`node:crypto`) |
+| Validation| zod |
+| External  | ZenQuotes (keyless), proxied through the server |
+
+No ORM, no auth SaaS, no bundled secrets.
 
 ## Getting started
 
 ### Prerequisites
-- Node.js 18+ and npm
+- **Node.js 22.5+** (for `node:sqlite`). Built and tested on Node 24.
 
-### Install and run locally
+### Install and run (development)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open the URL Vite prints (default: <http://localhost:5173>).
+This starts two processes via `concurrently`:
+- the API on `http://localhost:8787`
+- Vite on `http://localhost:5173` (which proxies `/api` to the API)
 
-### Other scripts
+Open <http://localhost:5173>, create an account, and you're in.
+
+> For server auto-reload on file changes, run `npm run dev:server:watch`
+> in place of the bundled `dev:server`.
+
+### Production build
 
 ```bash
-npm run build     # type-check and produce a production build in dist/
-npm run preview   # serve the production build locally
+npm run build     # type-checks, builds the client to dist/, bundles the server
+NODE_ENV=production npm start
 ```
+
+In production a single Node process serves the built client **and** the API on
+`PORT` (default 8787), with an SPA fallback for client routes.
+
+### Configuration
+
+Copy `.env.example` to `.env` to override defaults:
+
+| Variable        | Default                     | Purpose |
+| --------------- | --------------------------- | ------- |
+| `PORT`          | `8787`                      | Server port |
+| `DATABASE_PATH` | `./data/mindfultasks.db`    | SQLite file location |
+| `NODE_ENV`      | `development`               | `production` enables static file serving + `Secure` cookies |
 
 ## How data is stored
 
-All data lives in the browser's `localStorage` — there is no backend, database,
-or authentication.
+- **Users, sessions, todos, and meditation sessions** live in a SQLite database
+  (`DATABASE_PATH`). Schema and migrations are in `server/schema.ts`, applied
+  automatically on startup.
+- **Auth**: the browser holds only an opaque `mt_session` httpOnly cookie; the
+  session record (and its expiry) lives in the database and can be revoked.
+- **No `localStorage`** is used for app data anymore, except a one-time read to
+  migrate todos from the v1 layout.
 
-- **Todos** are saved under the key `mindfultasks.todos` as a JSON array. They
-  are written on every change and re-read when the app loads, so they persist
-  across refreshes and browser restarts on the same device/browser.
-- **Meditation timer** state (selected duration, remaining time, running/paused)
-  is kept in React component state only and resets when the page reloads.
-
-Clearing your browser storage for this site will remove all saved todos.
+To swap SQLite for Postgres (e.g. on a hosted platform), replace the queries in
+`server/db.ts` + `server/routes/*` with a Postgres client — the rest of the app
+is storage-agnostic. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Project structure
 
 ```
+server/
+  index.ts          # Hono app; serves the API (+ client in production)
+  db.ts             # SQLite connection + migration runner
+  schema.ts         # ordered migrations
+  auth.ts           # password hashing + session helpers
+  middleware.ts     # requireAuth
+  routes/           # auth, todos, meditation, quote
+  lib/quotes.ts     # offline quote fallback
 src/
-  components/
-    Card.tsx              # Reusable panel wrapper
-    Dashboard.tsx         # Top-level layout, owns todo state
-    MeditationSection.tsx # Timer UI + controls
-    ProgressBanner.tsx    # "Today's progress" hero
-    StatCard.tsx          # Small stat tile (total/active/done)
-    TodoInput.tsx         # Add-task form
-    TodoItem.tsx          # Single todo row
-    TodoSection.tsx       # Todo card: stats + input + list
-  hooks/
-    useLocalStorage.ts    # Generic state <-> localStorage sync
-    useTodos.ts           # Todo CRUD + derived counts
-    useMeditationTimer.ts # Countdown logic and controls
-  types.ts
-  App.tsx
-  main.tsx
+  context/AuthContext.tsx   # session state, register/login/logout
+  components/auth/           # sign-in / sign-up screen
+  components/                # Dashboard, Todo*, Meditation, QuoteCard, ...
+  hooks/useTodos.ts          # server-backed, optimistic
+  hooks/useMeditationStats.ts, useQuote.ts
+  lib/api.ts                 # fetch wrapper
+  lib/migrateLocalTodos.ts   # one-time v1 → account migration
 ```

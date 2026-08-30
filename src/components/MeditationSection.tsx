@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Card } from './Card'
 import {
   DURATION_OPTIONS,
@@ -14,7 +15,12 @@ function formatTime(totalSeconds: number): string {
 const RADIUS = 88
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-export function MeditationSection() {
+interface MeditationSectionProps {
+  /** Called once when a timer runs all the way to completion. */
+  onSessionComplete?: (durationMinutes: number) => void
+}
+
+export function MeditationSection({ onSessionComplete }: MeditationSectionProps) {
   const {
     durationMinutes,
     remaining,
@@ -28,6 +34,16 @@ export function MeditationSection() {
 
   const isRunning = status === 'running'
   const isCompleted = status === 'completed'
+
+  const loggedRef = useRef(false)
+  useEffect(() => {
+    if (status === 'completed' && !loggedRef.current) {
+      loggedRef.current = true
+      onSessionComplete?.(durationMinutes)
+    } else if (status !== 'completed') {
+      loggedRef.current = false
+    }
+  }, [status, durationMinutes, onSessionComplete])
 
   return (
     <Card title="Meditation" subtitle="Take a short pause to reset your focus.">
