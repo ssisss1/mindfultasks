@@ -10,8 +10,18 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+server-dist
 *.local
 *.tsbuildinfo
+
+# Local database + secrets
+/data
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

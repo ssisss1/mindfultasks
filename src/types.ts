@@ -6,3 +6,8 @@ export interface Todo {
 }
 
 export type MeditationStatus = 'idle' | 'running' | 'paused' | 'completed'
+
+export interface User {
+  id: string
+  email: string
+}

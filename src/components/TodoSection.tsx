@@ -7,6 +7,7 @@ import type { Todo } from '../types'
 interface TodoSectionProps {
   todos: Todo[]
   counts: { total: number; active: number; completed: number }
+  loading?: boolean
   onAdd: (title: string) => void
   onToggle: (id: string) => void
   onDelete: (id: string) => void
@@ -15,12 +16,16 @@ interface TodoSectionProps {
 export function TodoSection({
   todos,
   counts,
+  loading = false,
   onAdd,
   onToggle,
   onDelete,
 }: TodoSectionProps) {
   return (
-    <Card title="Today's Tasks" subtitle="Capture what matters, one small step at a time.">
+    <Card
+      title="Today's Tasks"
+      subtitle="Capture what matters, one small step at a time."
+    >
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Total" value={counts.total} />
         <StatCard label="Active" value={counts.active} />
@@ -32,7 +37,11 @@ export function TodoSection({
       </div>
 
       <ul className="mt-4 space-y-2">
-        {todos.length === 0 ? (
+        {loading && todos.length === 0 ? (
+          <li className="rounded-lg border border-dashed border-sage-200 px-3 py-6 text-center text-sm text-sage-400">
+            Loading your tasks…
+          </li>
+        ) : todos.length === 0 ? (
           <li className="rounded-lg border border-dashed border-sage-200 px-3 py-6 text-center text-sm text-sage-400">
             No tasks yet. Add your first one above.
           </li>

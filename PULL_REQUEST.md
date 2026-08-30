@@ -1,66 +1,77 @@
-# MindfulTasks — Todo list + meditation timer dashboard
+# MindfulTasks v2 — accounts, backend & database
 
 ## Summary
 
-MindfulTasks is a calm, single-page productivity dashboard that combines a
-simple todo list with a short guided-pause meditation timer. The goal is a
-focused MVP: capture the day's tasks, see progress at a glance, and take a
-mindful break — all client-side, with no account or backend.
+Turns MindfulTasks from a static localStorage SPA into a small multi-user
+web app: email/password accounts, a REST API, and server-side storage. The
+todo list and meditation timer behave the same for the user — they're just
+backed by an account now instead of the browser.
 
-This PR implements the full application on top of the project scaffold.
+- **Base branch:** `main` (v1, the original calm design — *not* the CRT branch)
+- **This branch:** `feature/mindfultasks-backend`
 
-- **Base branch:** `main` (Vite + React + TS + Tailwind scaffold)
-- **This branch:** `feature/mindfultasks-mvp`
+## What's new
 
-## Main features implemented
+### Backend (`server/`)
+- **Hono** API on Node.
+- **SQLite** via Node's built-in `node:sqlite` (no native modules); schema +
+  migrations in `server/schema.ts`, applied on startup.
+- **Auth**: register / login / logout; scrypt password hashing and opaque
+  httpOnly cookie sessions (both via `node:crypto`), revocable server-side.
+- **Routes**: `/api/auth/*`, `/api/todos` (CRUD, per-user), `/api/meditation/*`
+  (log a completed session + 7-day stats), `/api/quote` (external API proxy).
+- **External API**: `/api/quote` proxies ZenQuotes server-side and caches it,
+  with a bundled fallback list so it never hard-fails. Shows where a provider
+  key would go.
+- Input validation with **zod**; `requireAuth` middleware guards user data.
 
-### Todo list
-- Add a task by title (form + "Add" button, empty input is ignored)
-- Toggle tasks complete / incomplete
-- Delete tasks
-- Live counts for **total**, **active**, and **completed**
-- Persisted to `localStorage` under `mindfultasks.todos` — tasks survive a
-  refresh and browser restart
+### Frontend (`src/`)
+- `AuthContext` + a sign-in / sign-up screen; the dashboard is gated behind it.
+- `useTodos` rewritten to be **server-backed with optimistic updates** — same
+  public shape, so `TodoSection` / `TodoItem` / `TodoInput` are barely touched.
+- New: `useMeditationStats` (logs a session on timer completion, shows a 7-day
+  summary), `useQuote`, `QuoteCard`, `lib/api.ts`.
+- **One-time migration**: on first authenticated load, todos from the v1
+  `localStorage` key are POSTed into the account, then the key is cleared.
+  Made concurrency-safe after testing caught StrictMode double-invoking it.
+- `MeditationSection` gains one optional `onSessionComplete` prop; timer logic
+  is unchanged.
 
-### Meditation
-- Selectable durations: **1, 5, 10, 15 minutes**
-- Clear `MM:SS` countdown with a circular progress ring
-- **Start**, **Pause**, **Reset** controls (buttons disable when not applicable)
-- **"Meditation complete"** message shown when the countdown reaches zero
-- No audio, no external APIs
+### Build / deploy
+- `npm run dev` runs API + client together (Vite proxies `/api`).
+- `npm run build` type-checks, builds the client, **and** bundles the server
+  (`esbuild` → `server-dist/`). `npm start` serves both from one process.
+- `vite.config.ts` `base` back to `/`; GitHub Pages no longer applies —
+  see `DEPLOYMENT.md` (single Node host, or a Supabase swap).
 
-### Dashboard
-- Single page combining both sections in card panels
-- Prominent **"Today's progress"** banner (percentage, progress bar, remaining
-  task count)
-- Responsive layout: two columns on desktop, stacked on mobile
-
-## Tech stack
-
-| Concern      | Choice                        |
-| ------------ | ----------------------------- |
-| Build tool   | Vite 5                        |
-| UI           | React 18                      |
-| Language     | TypeScript 5 (strict)         |
-| Styling      | Tailwind CSS v3               |
-| Persistence  | Browser `localStorage` only   |
-
-No database, authentication, payments, or external services.
+### Removed
+- `src/hooks/useLocalStorage.ts` (no longer used).
 
 ## How it was tested
 
-- **Production build:** `npm run build` (runs `tsc -b` then `vite build`)
-  completes with no type or build errors.
-- **Manual testing** in the browser against the dev server:
-  - Added multiple tasks; verified total/active/completed counts and the
-    progress banner update correctly.
-  - Toggled tasks complete/incomplete and deleted tasks.
-  - Reloaded the page and confirmed tasks persist from `localStorage`.
-  - Ran the meditation timer end-to-end on the 1-minute setting and confirmed
-    the countdown, progress ring, Pause/Reset behaviour, and the
-    "Meditation complete" message at 00:00.
-  - Checked the responsive layout at mobile (375px) and desktop widths.
+**API (curl):** register/login/logout/session, todos CRUD, per-user isolation
+(2nd account sees nothing; `404` touching another user's todo), `401` without a
+session, meditation logging + stats, `/api/quote` hitting the live API.
+
+**Browser (dev server), full flow:**
+- Register → auto-login → dashboard.
+- Seeded a v1 `localStorage` list → on first load it migrated into the account
+  exactly once (3 todos, order + completed state preserved, key cleared).
+- Add / toggle / delete todos; **full page reload → state persists** from the DB.
+- Sign out → auth screen; register a 2nd account → **isolated** (empty).
+- Ran the 1-min timer to completion → `POST /meditation/sessions` fired once,
+  "Meditation complete" shown, 7-day stat updated live.
+- Quote card renders from the live external API.
+
+**Build:** `npm run build` passes (client + server). The production bundle
+(`NODE_ENV=production npm start`) serves the static client, the API, and the SPA
+fallback — all verified.
 
 ## Screenshot
 
-![MindfulTasks dashboard](docs/screenshot.png)
+![MindfulTasks v2 — signed-in dashboard](docs/screenshot.png)
+
+## Notes
+- Not merged, not deployed.
+- SQLite file is local/gitignored; pick a host with a persistent disk (or move
+  to Postgres/Supabase) per `DEPLOYMENT.md`.
