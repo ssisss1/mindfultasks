@@ -1,66 +1,66 @@
-# MindfulTasks — Todo list + meditation timer dashboard
+# MindfulTasks — 1980s CRT terminal re-skin
 
 ## Summary
 
-MindfulTasks is a calm, single-page productivity dashboard that combines a
-simple todo list with a short guided-pause meditation timer. The goal is a
-focused MVP: capture the day's tasks, see progress at a glance, and take a
-mindful break — all client-side, with no account or backend.
+A visual redesign of MindfulTasks into a cohesive 1980s CRT / phosphor-terminal
+interface. **No functionality changed** — the todo list, meditation timer, and
+`localStorage` persistence work exactly as before. This is styling only, plus a
+terminal "window" wrapper around the existing dashboard.
 
-This PR implements the full application on top of the project scaffold.
+- **Base branch:** `main`
+- **This branch:** `feature/mindfultasks-crt-theme`
 
-- **Base branch:** `main` (Vite + React + TS + Tailwind scaffold)
-- **This branch:** `feature/mindfultasks-mvp`
+## What changed
 
-## Main features implemented
+### Theme foundation
+- `tailwind.config.js` — replaced the `sage` palette with a `term` palette
+  (phosphor green `#4dff88`, amber `#ffb63d`, dark screen `#080b08`, etc.);
+  added `font-mono` (IBM Plex Mono) and `font-display` (VT323) families and
+  terminal glow shadows.
+- `src/index.css` — terminal web fonts; dark screen background; `.text-glow`
+  phosphor text-shadow helpers; a blinking cursor helper; and a fixed
+  `.crt-overlay` (scanlines + vignette + slow drift) with a subtle screen
+  flicker. All animation is disabled under `prefers-reduced-motion`.
+- `index.html` — added `theme-color` meta so the browser chrome matches.
 
-### Todo list
-- Add a task by title (form + "Add" button, empty input is ignored)
-- Toggle tasks complete / incomplete
-- Delete tasks
-- Live counts for **total**, **active**, and **completed**
-- Persisted to `localStorage` under `mindfultasks.todos` — tasks survive a
-  refresh and browser restart
+### Components (styling / presentation only)
+- `Dashboard.tsx` — wraps the dashboard in a terminal window with a title bar
+  (`● ● ●  mindfultasks — sys.monitor … online`) and a shell-prompt header.
+  Grid, breakpoints and all props/handlers are unchanged.
+- `Card.tsx` — panels are now sharp-edged terminal boxes with an uppercase
+  header bar; subtitles render as `// comments`.
+- `ProgressBanner.tsx` — the bar is now a 24-segment LED-style gauge; added
+  `role="progressbar"` for accessibility. Percentage / message logic unchanged.
+- `StatCard.tsx` — bordered readouts with big VT323 numerals; `accent` → amber.
+- `TodoInput.tsx` — framed input with a `>` prompt; button reads `[ Add ]`.
+- `TodoItem.tsx` — `appearance-none` checkbox styled as a terminal `[x]` box;
+  delete button reads `Del`. `onToggle` / `onDelete` / `aria-label` untouched.
+- `MeditationSection.tsx` — green glowing progress ring, VT323 countdown,
+  `[ Start ] [ Pause ] [ Reset ]` buttons, amber completion banner. The
+  `"Meditation complete"` text, timer math, and disabled logic are unchanged.
 
-### Meditation
-- Selectable durations: **1, 5, 10, 15 minutes**
-- Clear `MM:SS` countdown with a circular progress ring
-- **Start**, **Pause**, **Reset** controls (buttons disable when not applicable)
-- **"Meditation complete"** message shown when the countdown reaches zero
-- No audio, no external APIs
-
-### Dashboard
-- Single page combining both sections in card panels
-- Prominent **"Today's progress"** banner (percentage, progress bar, remaining
-  task count)
-- Responsive layout: two columns on desktop, stacked on mobile
-
-## Tech stack
-
-| Concern      | Choice                        |
-| ------------ | ----------------------------- |
-| Build tool   | Vite 5                        |
-| UI           | React 18                      |
-| Language     | TypeScript 5 (strict)         |
-| Styling      | Tailwind CSS v3               |
-| Persistence  | Browser `localStorage` only   |
-
-No database, authentication, payments, or external services.
+### Not touched
+`src/hooks/*`, `src/types.ts`, `src/App.tsx`, `vite.config.ts`, `package.json` —
+no logic, state, storage, or dependency changes.
 
 ## How it was tested
 
-- **Production build:** `npm run build` (runs `tsc -b` then `vite build`)
-  completes with no type or build errors.
-- **Manual testing** in the browser against the dev server:
-  - Added multiple tasks; verified total/active/completed counts and the
-    progress banner update correctly.
-  - Toggled tasks complete/incomplete and deleted tasks.
-  - Reloaded the page and confirmed tasks persist from `localStorage`.
-  - Ran the meditation timer end-to-end on the 1-minute setting and confirmed
-    the countdown, progress ring, Pause/Reset behaviour, and the
-    "Meditation complete" message at 00:00.
-  - Checked the responsive layout at mobile (375px) and desktop widths.
+- **Production build:** `npm run build` (`tsc -b && vite build`) — passes, no
+  type or build errors.
+- **Local dev server**, manual verification:
+  - Added a task, toggled tasks complete/incomplete, deleted a task — counts and
+    the progress gauge update correctly.
+  - Reloaded the page — tasks and their completed state persist from
+    `localStorage`.
+  - Meditation timer: selected 1:00, Start counts down, Pause freezes the value,
+    Reset returns to the selected duration; ran a full 1:00 cycle to `00:00` and
+    saw the `>> Meditation complete` banner, then Reset cleared it.
+  - No console errors on load or during interaction.
+  - Checked layouts at mobile (375px) and desktop widths — both remain usable.
 
 ## Screenshot
 
-![MindfulTasks dashboard](docs/screenshot.png)
+![MindfulTasks — CRT terminal theme](docs/screenshot.png)
+
+## Notes
+- Not merged, not deployed — for review only.

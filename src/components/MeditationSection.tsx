@@ -30,20 +30,20 @@ export function MeditationSection() {
   const isCompleted = status === 'completed'
 
   return (
-    <Card title="Meditation" subtitle="Take a short pause to reset your focus.">
+    <Card title="Meditation" subtitle="take a short pause to reset your focus">
       <div className="flex flex-wrap justify-center gap-2">
         {DURATION_OPTIONS.map((minutes) => (
           <button
             key={minutes}
             type="button"
             onClick={() => selectDuration(minutes as DurationMinutes)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            className={`border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] transition ${
               durationMinutes === minutes
-                ? 'bg-sage-500 text-white'
-                : 'bg-sage-50 text-sage-600 hover:bg-sage-100'
+                ? 'border-term-green bg-term-green/15 text-term-green shadow-term-glow'
+                : 'border-term-line text-term-muted hover:border-term-dim hover:text-term-text'
             }`}
           >
-            {minutes} min
+            {minutes}:00
           </button>
         ))}
       </div>
@@ -56,38 +56,39 @@ export function MeditationSection() {
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke="#e3ece6"
-              strokeWidth="10"
+              stroke="#14351f"
+              strokeWidth="5"
             />
             <circle
               cx="100"
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke="#548065"
-              strokeWidth="10"
-              strokeLinecap="round"
+              stroke="#4dff88"
+              strokeWidth="5"
+              strokeLinecap="butt"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
+              style={{ filter: 'drop-shadow(0 0 6px rgba(77,255,136,0.7))' }}
               className="transition-[stroke-dashoffset] duration-1000 ease-linear"
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-semibold tabular-nums text-sage-800">
+            <span className="font-display text-6xl leading-none tabular-nums text-term-green text-glow">
               {formatTime(remaining)}
             </span>
-            <span className="mt-1 text-xs font-medium uppercase tracking-wide text-sage-400">
-              {status === 'idle' && 'Ready'}
-              {status === 'running' && 'Breathe'}
-              {status === 'paused' && 'Paused'}
-              {status === 'completed' && 'Done'}
+            <span className="mt-1 text-[10px] uppercase tracking-[0.3em] text-term-muted">
+              {status === 'idle' && '> ready'}
+              {status === 'running' && '> breathe'}
+              {status === 'paused' && '> paused'}
+              {status === 'completed' && '> done'}
             </span>
           </div>
         </div>
 
         {isCompleted && (
-          <p className="mt-4 rounded-lg bg-sage-50 px-4 py-2 text-sm font-medium text-sage-700">
-            Meditation complete
+          <p className="mt-4 border border-term-amber bg-term-amber/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-term-amber text-glow-amber">
+            &gt;&gt; Meditation complete
           </p>
         )}
 
@@ -96,24 +97,24 @@ export function MeditationSection() {
             type="button"
             onClick={start}
             disabled={isRunning || isCompleted}
-            className="rounded-lg bg-sage-500 px-5 py-2 text-sm font-medium text-white transition hover:bg-sage-600 focus:outline-none focus:ring-2 focus:ring-sage-300 disabled:opacity-40"
+            className="border border-term-green bg-term-green/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-term-green transition hover:bg-term-green/20 hover:shadow-term-glow focus:outline-none focus-visible:ring-1 focus-visible:ring-term-green disabled:opacity-40 disabled:shadow-none"
           >
-            Start
+            [ Start ]
           </button>
           <button
             type="button"
             onClick={pause}
             disabled={!isRunning}
-            className="rounded-lg border border-sage-300 px-5 py-2 text-sm font-medium text-sage-700 transition hover:bg-sage-50 focus:outline-none focus:ring-2 focus:ring-sage-200 disabled:opacity-40"
+            className="border border-term-line px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-term-muted transition hover:border-term-dim hover:text-term-text focus:outline-none focus-visible:ring-1 focus-visible:ring-term-dim disabled:opacity-40"
           >
-            Pause
+            [ Pause ]
           </button>
           <button
             type="button"
             onClick={reset}
-            className="rounded-lg border border-sage-300 px-5 py-2 text-sm font-medium text-sage-700 transition hover:bg-sage-50 focus:outline-none focus:ring-2 focus:ring-sage-200"
+            className="border border-term-line px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-term-muted transition hover:border-term-dim hover:text-term-text focus:outline-none focus-visible:ring-1 focus-visible:ring-term-dim"
           >
-            Reset
+            [ Reset ]
           </button>
         </div>
       </div>

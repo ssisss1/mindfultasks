@@ -20,7 +20,10 @@ export function TodoSection({
   onDelete,
 }: TodoSectionProps) {
   return (
-    <Card title="Today's Tasks" subtitle="Capture what matters, one small step at a time.">
+    <Card
+      title="Task Queue"
+      subtitle="capture what matters, one small step at a time"
+    >
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Total" value={counts.total} />
         <StatCard label="Active" value={counts.active} />
@@ -33,8 +36,8 @@ export function TodoSection({
 
       <ul className="mt-4 space-y-2">
         {todos.length === 0 ? (
-          <li className="rounded-lg border border-dashed border-sage-200 px-3 py-6 text-center text-sm text-sage-400">
-            No tasks yet. Add your first one above.
+          <li className="border border-dashed border-term-line px-3 py-6 text-center text-xs text-term-dim">
+            &gt; no tasks in queue &mdash; add one above
           </li>
         ) : (
           todos.map((todo) => (

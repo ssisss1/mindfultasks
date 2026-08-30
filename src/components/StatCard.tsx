@@ -7,14 +7,22 @@ interface StatCardProps {
 export function StatCard({ label, value, accent = false }: StatCardProps) {
   return (
     <div
-      className={`rounded-xl px-4 py-3 text-center ${
-        accent ? 'bg-sage-500 text-white' : 'bg-sage-50 text-sage-800'
+      className={`border px-3 py-3 text-center ${
+        accent
+          ? 'border-term-amber bg-term-amber/10'
+          : 'border-term-line bg-term-raised'
       }`}
     >
-      <div className="text-2xl font-semibold tabular-nums">{value}</div>
       <div
-        className={`mt-0.5 text-xs font-medium uppercase tracking-wide ${
-          accent ? 'text-sage-50' : 'text-sage-500'
+        className={`font-display text-3xl leading-none tabular-nums ${
+          accent ? 'text-term-amber text-glow-amber' : 'text-term-green text-glow'
+        }`}
+      >
+        {value}
+      </div>
+      <div
+        className={`mt-1 text-[10px] uppercase tracking-[0.22em] ${
+          accent ? 'text-term-amber/80' : 'text-term-muted'
         }`}
       >
         {label}

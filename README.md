@@ -31,9 +31,15 @@ glance. Everything is stored locally in your browser — no account, no server.
 - No audio, no external APIs.
 
 ### Dashboard
-- Clean single-page layout combining both sections in cards/panels.
+- Single-page layout combining both sections in terminal-style panels.
 - "Today's progress" banner highlighting task completion.
 - Responsive for desktop and mobile.
+
+### Theme
+- 1980s CRT / phosphor-terminal aesthetic: dark screen, monospace type
+  (IBM Plex Mono + VT323), green/amber accents, scanline and glow effects.
+- Purely visual — all functionality and data handling are unchanged.
+- CRT flicker and scanline drift respect `prefers-reduced-motion`.
 
 ## Tech stack
 
@@ -41,6 +47,7 @@ glance. Everything is stored locally in your browser — no account, no server.
 - [React 18](https://react.dev/) — UI library
 - [TypeScript](https://www.typescriptlang.org/) — typing
 - [Tailwind CSS v3](https://tailwindcss.com/) — styling
+- Google Fonts (IBM Plex Mono, VT323) — terminal typography
 - Browser `localStorage` — persistence
 
 ## Getting started

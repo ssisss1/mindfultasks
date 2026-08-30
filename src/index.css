@@ -1,10 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=VT323&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+  --term-green: #4dff88;
+  --term-amber: #ffb63d;
+}
+
 html {
+  background: #080b08;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -12,4 +19,107 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  background: #080b08;
+  color: #b6f2c7;
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+::selection {
+  background: rgba(77, 255, 136, 0.3);
+  color: #eafff1;
+}
+
+/* --- Phosphor text glow ------------------------------------------------ */
+.text-glow {
+  text-shadow: 0 0 4px currentColor, 0 0 14px rgba(77, 255, 136, 0.35);
+}
+.text-glow-amber {
+  text-shadow: 0 0 4px currentColor, 0 0 16px rgba(255, 182, 61, 0.4);
+}
+
+/* --- Blinking terminal cursor --------------------------------------- */
+.cursor-blink::after {
+  content: '\2588';
+  margin-left: 0.15em;
+  color: var(--term-green);
+  animation: term-blink 1.1s steps(1) infinite;
+}
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* --- CRT screen overlay: scanlines, vignette, flicker ----------------- */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.16) 0,
+    rgba(0, 0, 0, 0.16) 1px,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(0, 0, 0, 0) 3px
+  );
+  mix-blend-mode: multiply;
+}
+.crt-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 120% at 50% 50%,
+    rgba(0, 0, 0, 0) 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+.crt-overlay::before {
+  content: '';
+  position: absolute;
+  inset: -50% 0;
+  background: linear-gradient(
+    rgba(77, 255, 136, 0) 0%,
+    rgba(77, 255, 136, 0.04) 50%,
+    rgba(77, 255, 136, 0) 100%
+  );
+  animation: crt-roll 7s linear infinite;
+}
+@keyframes crt-roll {
+  0% {
+    transform: translateY(-30%);
+  }
+  100% {
+    transform: translateY(30%);
+  }
+}
+
+.crt-flicker {
+  animation: crt-flicker 4.5s infinite steps(48);
+}
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 0.98;
+  }
+  7% {
+    opacity: 0.94;
+  }
+  50% {
+    opacity: 1;
+  }
+  53% {
+    opacity: 0.96;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-overlay::before,
+  .crt-flicker {
+    animation: none;
+  }
+  .cursor-blink::after {
+    animation: none;
+  }
 }
