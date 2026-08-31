@@ -6,7 +6,6 @@ services:
     name: mindfultasks
     runtime: node
     plan: free
-    region: singapore
     # --include=dev: NODE_ENV=production (below) otherwise skips the build tools.
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
