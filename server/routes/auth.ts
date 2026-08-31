@@ -1,7 +1,7 @@
 import { Hono, type Context } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import { z } from 'zod'
-import { db } from '../db.ts'
+import { db, one } from '../db.ts'
 import { env } from '../env.ts'
 import {
   createSession,
@@ -39,18 +39,21 @@ authRoutes.post('/register', async (c) => {
   }
   const { email, password } = parsed.data
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
-  if (existing) {
+  const existing = await db.execute({
+    sql: 'SELECT id FROM users WHERE email = ?',
+    args: [email],
+  })
+  if (existing.rows.length > 0) {
     return c.json({ error: 'An account with that email already exists' }, 409)
   }
 
   const id = newUserId()
-  db.prepare(
-    'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
-  ).run(id, email, hashPassword(password))
+  await db.execute({
+    sql: 'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)',
+    args: [id, email, hashPassword(password)],
+  })
 
-  const token = createSession(id)
-  setSessionCookie(c, token)
+  setSessionCookie(c, await createSession(id))
   return c.json({ user: { id, email } }, 201)
 })
 
@@ -62,29 +65,30 @@ authRoutes.post('/login', async (c) => {
   }
   const { email, password } = parsed.data
 
-  const user = db
-    .prepare('SELECT id, email, password_hash FROM users WHERE email = ?')
-    .get(email) as
-    | { id: string; email: string; password_hash: string }
-    | undefined
+  const result = await db.execute({
+    sql: 'SELECT id, email, password_hash FROM users WHERE email = ?',
+    args: [email],
+  })
+  const user = one<{ id: string; email: string; password_hash: string }>(
+    result.rows,
+  )
 
   if (!user || !verifyPassword(password, user.password_hash)) {
     return c.json({ error: 'Invalid email or password' }, 401)
   }
 
-  const token = createSession(user.id)
-  setSessionCookie(c, token)
+  setSessionCookie(c, await createSession(user.id))
   return c.json({ user: { id: user.id, email: user.email } })
 })
 
-authRoutes.post('/logout', (c) => {
-  destroySession(getCookie(c, SESSION_COOKIE))
+authRoutes.post('/logout', async (c) => {
+  await destroySession(getCookie(c, SESSION_COOKIE))
   deleteCookie(c, SESSION_COOKIE, { path: '/' })
   return c.json({ ok: true })
 })
 
-authRoutes.get('/me', (c) => {
-  const user = getSessionUser(getCookie(c, SESSION_COOKIE))
+authRoutes.get('/me', async (c) => {
+  const user = await getSessionUser(getCookie(c, SESSION_COOKIE))
   if (!user) return c.json({ user: null })
   return c.json({ user })
 })

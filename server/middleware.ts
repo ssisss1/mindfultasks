@@ -13,7 +13,7 @@ export async function requireAuth(
   c: Context<AppEnv>,
   next: Next,
 ): Promise<Response | void> {
-  const user = getSessionUser(getCookie(c, SESSION_COOKIE))
+  const user = await getSessionUser(getCookie(c, SESSION_COOKIE))
   if (!user) {
     return c.json({ error: 'Not authenticated' }, 401)
   }

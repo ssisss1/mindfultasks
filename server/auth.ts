@@ -4,7 +4,7 @@ import {
   scryptSync,
   timingSafeEqual,
 } from 'node:crypto'
-import { db } from './db.ts'
+import { db, one } from './db.ts'
 import { env } from './env.ts'
 
 const SCRYPT_KEYLEN = 64
@@ -28,38 +28,44 @@ export interface SessionUser {
   email: string
 }
 
-export function createSession(userId: string): string {
+export async function createSession(userId: string): Promise<string> {
   const token = randomUUID() + randomBytes(24).toString('hex')
   const expiresAt = new Date(
     Date.now() + env.sessionTtlDays * 24 * 60 * 60 * 1000,
   ).toISOString()
-  db.prepare(
-    'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
-  ).run(token, userId, expiresAt)
+  await db.execute({
+    sql: 'INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)',
+    args: [token, userId, expiresAt],
+  })
   return token
 }
 
-export function getSessionUser(token: string | undefined): SessionUser | null {
+export async function getSessionUser(
+  token: string | undefined,
+): Promise<SessionUser | null> {
   if (!token) return null
-  const row = db
-    .prepare(
-      `SELECT u.id AS id, u.email AS email, s.expires_at AS expiresAt
-         FROM sessions s
-         JOIN users u ON u.id = s.user_id
-        WHERE s.token = ?`,
-    )
-    .get(token) as { id: string; email: string; expiresAt: string } | undefined
+  const result = await db.execute({
+    sql: `SELECT u.id AS id, u.email AS email, s.expires_at AS expiresAt
+            FROM sessions s
+            JOIN users u ON u.id = s.user_id
+           WHERE s.token = ?`,
+    args: [token],
+  })
+  const row = one<{ id: string; email: string; expiresAt: string }>(result.rows)
   if (!row) return null
   if (new Date(row.expiresAt).getTime() < Date.now()) {
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(token)
+    await db.execute({
+      sql: 'DELETE FROM sessions WHERE token = ?',
+      args: [token],
+    })
     return null
   }
   return { id: row.id, email: row.email }
 }
 
-export function destroySession(token: string | undefined): void {
+export async function destroySession(token: string | undefined): Promise<void> {
   if (!token) return
-  db.prepare('DELETE FROM sessions WHERE token = ?').run(token)
+  await db.execute({ sql: 'DELETE FROM sessions WHERE token = ?', args: [token] })
 }
 
 export const SESSION_COOKIE = 'mt_session'
