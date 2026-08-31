@@ -43,6 +43,7 @@ if (env.isProd && existsSync(env.clientDir)) {
 
 await initDb()
 
-serve({ fetch: app.fetch, port: env.port }, (info) => {
-  console.log(`[server] MindfulTasks API on http://localhost:${info.port} (${env.nodeEnv})`)
+// hostname 0.0.0.0 so container/PaaS health checks can reach it.
+serve({ fetch: app.fetch, port: env.port, hostname: '0.0.0.0' }, (info) => {
+  console.log(`[server] MindfulTasks listening on 0.0.0.0:${info.port} (${env.nodeEnv})`)
 })

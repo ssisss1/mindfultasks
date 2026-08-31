@@ -4,6 +4,9 @@
   "version": "2.0.0",
   "type": "module",
   "description": "A calm dashboard combining a todo list and a meditation timer, with user accounts and server-side storage.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently -k -n server,client -c blue,magenta \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
