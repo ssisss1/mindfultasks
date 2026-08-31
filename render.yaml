@@ -1,0 +1,18 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# New → Blueprint → point at this repo. Then set the two secret env vars
+# (DATABASE_URL, DATABASE_AUTH_TOKEN) in the dashboard.
+services:
+  - type: web
+    name: mindfultasks
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_AUTH_TOKEN
+        sync: false

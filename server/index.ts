@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { env } from './env.ts'
-import './db.ts' // opens the database and runs migrations on import
+import { initDb } from './db.ts'
 import type { AppEnv } from './middleware.ts'
 import { authRoutes } from './routes/auth.ts'
 import { todoRoutes } from './routes/todos.ts'
@@ -40,6 +40,8 @@ if (env.isProd && existsSync(env.clientDir)) {
     : '<!doctype html><title>MindfulTasks</title>'
   app.get('*', (c) => c.html(indexHtml)) // SPA fallback
 }
+
+await initDb()
 
 serve({ fetch: app.fetch, port: env.port }, (info) => {
   console.log(`[server] MindfulTasks API on http://localhost:${info.port} (${env.nodeEnv})`)

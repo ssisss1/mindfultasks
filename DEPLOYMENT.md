@@ -1,93 +1,77 @@
 # Deploying MindfulTasks
 
-Version 2 has a server, so **GitHub Pages no longer works**. You need a host that
-runs a Node process (or a container). A `Dockerfile` is included and is the
-easiest portable option.
+v2 needs a Node host **and** a database. The database is
+[libSQL / Turso](https://turso.tech) — a hosted SQLite with a free, no-card
+tier. Locally, the same code uses a plain SQLite file (`./data/mindfultasks.db`).
 
-The app is one process: it serves the built client and the API on `$PORT`
-(default 8787). It needs a **persistent volume** mounted at `/data` (or set
-`DATABASE_PATH` elsewhere) or the SQLite database resets on every redeploy.
-
-Required env: `NODE_ENV=production`. `PORT` is usually injected by the host.
+The server is one process: it serves the built client and the API on `$PORT`.
 
 ---
 
-## Fly.io  (has a free volume allowance)
+## 1. Create the database (Turso — free, no card)
+
+Web dashboard (<https://turso.tech>) or CLI:
 
 ```bash
-# one-time
-curl -L https://fly.io/install.sh | sh
-fly auth login
-
-# from the repo root
-fly launch --no-deploy          # accept the Dockerfile; pick a name/region
-fly volumes create data --size 1
-# ensure fly.toml has:  [mounts]  source = "data"  destination = "/data"
-fly deploy
+# install: curl -sSfL https://get.tur.so/install.sh | bash
+turso auth signup
+turso db create mindfultasks
+turso db show mindfultasks --url           # -> DATABASE_URL  (libsql://...)
+turso db tokens create mindfultasks        # -> DATABASE_AUTH_TOKEN
 ```
 
-`fly.toml` also needs `[env] NODE_ENV = "production"` and the internal port set
-to `8787` (or set `PORT` via `fly secrets`).
+You don't need to create tables — the server runs its migrations on startup.
 
----
+## 2. Deploy the server
 
-## Render
+### Render (free, no card) — `render.yaml` included
 
-1. New → **Web Service** → connect this repo.
-2. Runtime: **Docker**. Render reads the `Dockerfile`.
-3. Add env var `NODE_ENV=production`.
-4. Add a **Disk**: mount path `/data`, size 1 GB. *(Disks require a paid
-   instance type; on the free tier the SQLite file is wiped on each deploy —
-   fine for a demo, not for real use.)*
+1. <https://dashboard.render.com> → **New → Blueprint** → pick this repo.
+2. It reads `render.yaml` (Node runtime, `npm ci && npm run build`, `npm start`).
+3. Set the two secret env vars in the dashboard:
+   - `DATABASE_URL` = the `libsql://…` URL from step 1
+   - `DATABASE_AUTH_TOKEN` = the token from step 1
+4. Deploy. Health check is `/api/health`.
 
----
+> Render's free web service sleeps after ~15 min idle and cold-starts on the
+> next request (a few seconds). Data is safe — it's in Turso, not on the box.
 
-## Railway
+### Any Docker host — `Dockerfile` included
 
-1. New Project → Deploy from repo.
-2. It detects the `Dockerfile`.
-3. Add a **Volume** mounted at `/data`.
-4. Set `NODE_ENV=production`.
+`docker build -t mindfultasks . && docker run -p 8787:8787 \
+  -e NODE_ENV=production -e DATABASE_URL=... -e DATABASE_AUTH_TOKEN=... mindfultasks`
 
----
+Works on Fly.io, Railway, Koyeb, a VPS, etc.
 
-## Plain VPS / any Node 22.5+ host (no Docker)
+### Plain Node host
 
 ```bash
-npm ci
-npm run build
-NODE_ENV=production DATABASE_PATH=/srv/mindfultasks/data.db PORT=8787 npm start
+npm ci && npm run build
+NODE_ENV=production DATABASE_URL=libsql://... DATABASE_AUTH_TOKEN=... npm start
 ```
 
-Put it behind a reverse proxy (Caddy/nginx) for TLS. Cookies are `Secure` in
-production, so HTTPS is required.
+Serve behind HTTPS — session cookies are `Secure` in production.
 
 ---
 
-## Outgrowing SQLite (move to Postgres)
+## Config reference
 
-SQLite on one disk is fine for a single instance. For multiple instances or
-managed backups:
+| Variable              | Default (dev)                  | Notes |
+| --------------------- | ------------------------------ | ----- |
+| `PORT`                | `8787`                         | Injected by most hosts |
+| `NODE_ENV`            | `development`                  | `production` = static serving + `Secure` cookies |
+| `DATABASE_URL`        | `file:./data/mindfultasks.db`  | `libsql://<db>.turso.io` in prod |
+| `DATABASE_AUTH_TOKEN` | *(none)*                       | Required for a remote Turso URL |
 
-- Add `DATABASE_URL` + a Postgres client (`pg` / `postgres`).
-- Port the `CREATE TABLE`s in `server/schema.ts` (SQLite → Postgres:
-  `INTEGER` booleans → `boolean`, `datetime('now')` → `now()`).
-- Replace the `db.prepare(...).get/all/run` calls in `server/db.ts` and
-  `server/routes/*` — they're simple and centralised.
-- Nothing in `src/` changes.
+## Swapping the database
 
-## Supabase alternative
+The DB layer is `@libsql/client` behind `server/db.ts` (`export const db`,
+plus `one` / `many` row helpers). It already speaks the libSQL protocol, so any
+libSQL-compatible target works by changing env vars only. For plain Postgres,
+replace `server/db.ts` and the `db.execute(...)` calls in `server/routes/*` —
+they're centralised and simple.
 
-Supabase replaces the server *and* the database, letting the frontend stay a
-static SPA. Rough steps: create `todos` / `meditation_sessions` tables with
-`user_id` + row-level security (`user_id = auth.uid()`); swap `AuthContext` for
-Supabase Auth and the `api.*` calls for Supabase queries; delete `server/`. The
-SQL in `server/schema.ts` is a good starting point for the table definitions.
+## The old GitHub Pages site
 
----
-
-## About the old GitHub Pages site
-
-`https://ssisss1.github.io/mindfultasks/` was the v1 build. The Pages workflow
-was removed on this branch. Take the Pages site down (repo Settings → Pages), or
-leave it until the v2 host is live and then point users at the new URL.
+`https://ssisss1.github.io/mindfultasks/` is the v1 build. Its workflow was
+removed. Take it down (repo Settings → Pages) once the v2 host is live.

@@ -42,7 +42,7 @@ auth, no tracking.
 | --------- | ------ |
 | Frontend  | Vite + React 18 + TypeScript + Tailwind CSS v3 |
 | Backend   | Hono (Node) — a small REST API |
-| Database  | SQLite via Node's built-in `node:sqlite` |
+| Database  | libSQL — a local SQLite file in dev, [Turso](https://turso.tech) in prod (`@libsql/client`) |
 | Auth      | scrypt password hashing + cookie sessions (`node:crypto`) |
 | Validation| zod |
 | External  | ZenQuotes (keyless), proxied through the server |
@@ -52,7 +52,7 @@ No ORM, no auth SaaS, no bundled secrets.
 ## Getting started
 
 ### Prerequisites
-- **Node.js 22.5+** (for `node:sqlite`). Built and tested on Node 24.
+- **Node.js 20+**. Built and tested on Node 24.
 
 ### Install and run (development)
 
@@ -84,32 +84,32 @@ In production a single Node process serves the built client **and** the API on
 
 Copy `.env.example` to `.env` to override defaults:
 
-| Variable        | Default                     | Purpose |
-| --------------- | --------------------------- | ------- |
-| `PORT`          | `8787`                      | Server port |
-| `DATABASE_PATH` | `./data/mindfultasks.db`    | SQLite file location |
-| `NODE_ENV`      | `development`               | `production` enables static file serving + `Secure` cookies |
+| Variable              | Default                       | Purpose |
+| --------------------- | ----------------------------- | ------- |
+| `PORT`                | `8787`                        | Server port |
+| `DATABASE_URL`        | `file:./data/mindfultasks.db` | `libsql://…turso.io` in production |
+| `DATABASE_AUTH_TOKEN` | *(none)*                      | Required for a remote Turso URL |
+| `NODE_ENV`            | `development`                 | `production` enables static file serving + `Secure` cookies |
 
 ## How data is stored
 
-- **Users, sessions, todos, and meditation sessions** live in a SQLite database
-  (`DATABASE_PATH`). Schema and migrations are in `server/schema.ts`, applied
-  automatically on startup.
+- **Users, sessions, todos, and meditation sessions** live in a libSQL database:
+  a local SQLite file in development, a hosted [Turso](https://turso.tech)
+  database in production. Schema and migrations are in `server/schema.ts`,
+  applied automatically on startup.
 - **Auth**: the browser holds only an opaque `mt_session` httpOnly cookie; the
   session record (and its expiry) lives in the database and can be revoked.
 - **No `localStorage`** is used for app data anymore, except a one-time read to
   migrate todos from the v1 layout.
 
-To swap SQLite for Postgres (e.g. on a hosted platform), replace the queries in
-`server/db.ts` + `server/routes/*` with a Postgres client — the rest of the app
-is storage-agnostic. See [DEPLOYMENT.md](DEPLOYMENT.md).
+See [DEPLOYMENT.md](DEPLOYMENT.md) for hosting and for swapping the database.
 
 ## Project structure
 
 ```
 server/
   index.ts          # Hono app; serves the API (+ client in production)
-  db.ts             # SQLite connection + migration runner
+  db.ts             # libSQL client + migration runner
   schema.ts         # ordered migrations
   auth.ts           # password hashing + session helpers
   middleware.ts     # requireAuth

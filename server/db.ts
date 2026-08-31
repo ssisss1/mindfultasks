@@ -1,47 +1,54 @@
-import { DatabaseSync } from 'node:sqlite'
+import { createClient, type Client, type Row } from '@libsql/client'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { env } from './env.ts'
 import { migrations } from './schema.ts'
 
-function openDatabase(): DatabaseSync {
-  if (env.databasePath !== ':memory:') {
-    mkdirSync(dirname(env.databasePath), { recursive: true })
+/** Narrow a libSQL result row to the shape the caller expects. */
+export const one = <T>(rows: Row[]): T | undefined =>
+  rows[0] as unknown as T | undefined
+export const many = <T>(rows: Row[]): T[] => rows as unknown as T[]
+
+function makeClient(): Client {
+  if (env.databaseUrl.startsWith('file:')) {
+    const path = env.databaseUrl.slice('file:'.length)
+    if (path && path !== ':memory:') {
+      mkdirSync(dirname(path), { recursive: true })
+    }
   }
-  const database = new DatabaseSync(env.databasePath)
-  database.exec('PRAGMA journal_mode = WAL')
-  database.exec('PRAGMA foreign_keys = ON')
-  return database
+  return createClient({ url: env.databaseUrl, authToken: env.databaseAuthToken })
 }
 
-function runMigrations(database: DatabaseSync): void {
-  database.exec(
+export const db = makeClient()
+
+/** Applies pending migrations. Call once at startup before serving. */
+export async function initDb(): Promise<void> {
+  await db.execute(
     `CREATE TABLE IF NOT EXISTS _migrations (
        name TEXT PRIMARY KEY,
        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
      )`,
   )
-  const applied = new Set(
-    database
-      .prepare('SELECT name FROM _migrations')
-      .all()
-      .map((row) => (row as { name: string }).name),
-  )
-  const insert = database.prepare('INSERT INTO _migrations (name) VALUES (?)')
+
+  const appliedRows = await db.execute('SELECT name FROM _migrations')
+  const applied = new Set(appliedRows.rows.map((row) => row.name as string))
+
   for (const migration of migrations) {
     if (applied.has(migration.name)) continue
-    database.exec('BEGIN')
-    try {
-      database.exec(migration.sql)
-      insert.run(migration.name)
-      database.exec('COMMIT')
-      console.log(`[db] applied migration ${migration.name}`)
-    } catch (error) {
-      database.exec('ROLLBACK')
-      throw error
-    }
+    const statements = migration.sql
+      .split(';')
+      .map((statement) => statement.trim())
+      .filter(Boolean)
+    await db.batch(
+      [
+        ...statements,
+        {
+          sql: 'INSERT INTO _migrations (name) VALUES (?)',
+          args: [migration.name],
+        },
+      ],
+      'write',
+    )
+    console.log(`[db] applied migration ${migration.name}`)
   }
 }
-
-export const db = openDatabase()
-runMigrations(db)
