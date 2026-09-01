@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MindfulTasks Today</title>
+<meta name="description" content="A calm daily view: today's tasks with priority and due dates, a simple progress row, and a guided breathing pause.">
+<meta name="theme-color" content="#F3EFE6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+
+    --bg: #F3EFE6;
+    --bg-deep: #F1ECE0;
+    --panel: #F7F4EA;
+
+    --ink: #322E27;
+    --ink-soft: #4C473D;
+    --muted: #8B8371;
+    --faint: #A79E8C;
+    --done-ink: #96907E;
+
+    --hair: #E8E1D0;
+    --hair-strong: #E4DCC9;
+    --ring: #C6BDA7;
+    --ring-dashed: #D1C9B5;
+    --placeholder: #BEB6A2;
+
+    --sage: #8C9679;
+    --sage-line: #94A17F;
+    --sage-hover: #55604A;
+    --low: #9AA487;
+    --ochre: #B29A63;
+    --clay: #B07D5B;
+
+    --orb: #D8DDC9;
+    --orb-ring: #B9C0A7;
+    --check-mark: #F4F1E7;
+
+    --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --sans: 'Work Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+  input { font: inherit; }
+  :focus-visible { outline: 2px solid var(--sage-line); outline-offset: 3px; border-radius: 2px; }
+
+  .wrap {
+    position: relative;
+    min-height: 100vh;
+    padding: 72px 24px 120px;
+    overflow: hidden;
+  }
+  .enso {
+    position: absolute;
+    top: -74px;
+    right: min(6vw, 118px);
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 1px solid #E9E2D1;
+    pointer-events: none;
+  }
+  .col {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .h1 {
+    margin: 0.34em 0 0;
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(32px, 6vw, 40px);
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .progress {
+    margin-top: 26px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  .beads { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bead {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--ring);
+    transition: background .45s ease, border-color .45s ease;
+  }
+  .bead.on { background: var(--sage); border-color: var(--sage); }
+  .count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .pause-band {
+    margin-top: 44px;
+    border: 1px solid var(--hair-strong);
+    border-radius: 3px;
+    background: var(--panel);
+    padding: 26px 28px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .band-ring { width: 64px; height: 64px; flex: none; display: grid; place-items: center; cursor: pointer; }
+  .band-ring i {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1.5px solid var(--sage-line);
+    display: block;
+  }
+  .band-text { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .band-invite {
+    margin: 0;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+    text-wrap: pretty;
+  }
+  .band-controls { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+  .durations { display: flex; align-items: baseline; gap: 12px; font-size: 13px; }
+  .dur {
+    color: var(--muted);
+    padding: 4px 1px;
+    border-bottom: 1px solid transparent;
+    transition: color .2s ease, border-color .2s ease;
+  }
+  .dur[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--sage-line); }
+  .dur:hover { color: var(--ink-soft); }
+  .begin {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--sage-line);
+    border-bottom: 1px solid var(--sage-line);
+    padding: 3px 1px;
+    transition: color .2s ease;
+  }
+  .begin:hover { color: var(--sage-hover); border-bottom-color: var(--sage-hover); }
+
+  .section { margin-top: 50px; }
+  .section-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .list { list-style: none; margin: 10px 0 0; padding: 0; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 17px 0;
+    border-top: 1px solid var(--hair);
+  }
+  .check {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border-radius: 50%;
+    border: 1.5px solid var(--ring);
+    display: grid;
+    place-items: center;
+    transition: background .25s ease, border-color .25s ease;
+  }
+  .check:hover { border-color: var(--sage-line); }
+  .check svg { width: 12px; height: 12px; opacity: 0; transform: scale(.6); transition: opacity .2s ease, transform .2s ease; }
+  .row.done .check { background: var(--sage); border-color: var(--sage); }
+  .row.done .check svg { opacity: 1; transform: scale(1); }
+
+  .body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  .title { font-size: 16px; color: var(--ink); overflow-wrap: anywhere; }
+  .row.done .title { color: var(--done-ink); }
+  .meta { display: flex; align-items: center; }
+
+  .prio { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .prio-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    border: 1px solid var(--ring); background: transparent;
+    transition: background .2s ease, border-color .2s ease;
+  }
+  .prio-label { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+  .prio[data-p="low"] .prio-dot { background: var(--low); border-color: var(--low); }
+  .prio[data-p="medium"] .prio-dot { background: var(--ochre); border-color: var(--ochre); }
+  .prio[data-p="high"] .prio-dot { background: var(--clay); border-color: var(--clay); }
+  .prio[data-p="none"] .prio-label { color: var(--placeholder); }
+
+  .due-wrap { position: relative; flex: none; display: inline-flex; }
+  .due { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 2px; white-space: nowrap; }
+  .due.soon { color: #5F5B4D; }
+  .due.over { color: var(--clay); }
+  .due.empty { color: var(--placeholder); }
+  .due-input {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; cursor: pointer;
+    border: 0; padding: 0;
+  }
+  .due-input::-webkit-calendar-picker-indicator { cursor: pointer; }
+
+  .row.add .check { border-style: dashed; border-color: var(--ring-dashed); }
+  .row.add { cursor: pointer; }
+  .add-hint { font-size: 15px; color: var(--placeholder); }
+  .add-form { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .add-input {
+    flex: 1 1 180px; min-width: 0;
+    border: 0; border-bottom: 1px solid var(--ring);
+    background: transparent; color: var(--ink);
+    font-size: 16px; padding: 4px 0;
+  }
+  .add-input::placeholder { color: var(--placeholder); }
+  .add-input:focus { outline: none; border-bottom-color: var(--sage-line); }
+  .add-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .add-go { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sage-line); }
+  .add-go:hover { color: var(--sage-hover); }
+  .add-cancel { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+
+  /* Breathing session */
+  .pause {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: var(--bg-deep);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 78px 24px 66px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .55s ease, visibility .55s;
+  }
+  .pause.show { opacity: 1; visibility: visible; }
+  .pause-eyebrow { font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); }
+  .orb-wrap {
+    margin-top: min(11vh, 88px);
+    width: 300px; height: 300px;
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .orb-halo {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(148, 161, 127, .20), rgba(148, 161, 127, 0) 68%);
+  }
+  .orb-ring { position: absolute; width: 232px; height: 232px; border-radius: 50%; border: 1px solid var(--orb-ring); }
+  .orb {
+    width: 168px; height: 168px;
+    border-radius: 50%;
+    background: var(--orb);
+    transform: scale(.58);
+    transition: transform 4000ms ease-in-out;
+  }
+  .pause-phase { margin-top: 46px; font-family: var(--serif); font-style: italic; font-size: 24px; color: #47433A; }
+  .pause-time { margin-top: 52px; font-size: 13px; letter-spacing: 0.06em; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pause-guide {
+    margin: 34px 0 0;
+    max-width: 290px;
+    text-align: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.65;
+    color: #958C79;
+  }
+  .pause-end {
+    margin-top: auto;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 16px;
+  }
+  .pause-end:hover { color: var(--ink-soft); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .band-ring i { animation: band-breathe 10s ease-in-out infinite; }
+    .orb-halo { animation: halo 12s ease-in-out infinite; }
+  }
+  @keyframes band-breathe {
+    0%, 100% { transform: scale(.86); opacity: .42; }
+    50% { transform: scale(1.14); opacity: .9; }
+  }
+  @keyframes halo {
+    0%, 100% { opacity: .26; transform: scale(.84); }
+    50% { opacity: .6; transform: scale(1.04); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pause { transition-duration: .01ms; }
+    .bead, .check, .check svg { transition-duration: .01ms; }
+  }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 50px 20px 90px; }
+    .enso { width: 148px; height: 148px; top: -50px; right: -30px; }
+    .pause-band { flex-direction: column; align-items: stretch; gap: 18px; padding: 22px 22px 24px; }
+    .band-controls { flex-direction: row; align-items: center; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="enso" aria-hidden="true"></div>
+
+  <div class="col">
+    <header>
+      <p class="eyebrow" id="dateLine">Today</p>
+      <h1 class="h1">Today</h1>
+    </header>
+
+    <div class="progress" id="progress" role="progressbar" aria-label="Tasks completed today" aria-valuemin="0">
+      <div class="beads" id="beads" aria-hidden="true"></div>
+      <span class="count" id="count"></span>
+    </div>
+
+    <section class="pause-band" aria-label="Guided breathing">
+      <span class="band-ring" id="bandRing" role="button" tabindex="0" aria-label="Begin a breathing pause"><i></i></span>
+      <div class="band-text">
+        <span class="eyebrow">Guided breathing</span>
+        <p class="band-invite">Take a slow minute before you begin.</p>
+      </div>
+      <div class="band-controls">
+        <div class="durations" role="group" aria-label="Session length">
+          <button type="button" class="dur" data-min="1" aria-pressed="true">1 min</button>
+          <button type="button" class="dur" data-min="3" aria-pressed="false">3</button>
+          <button type="button" class="dur" data-min="5" aria-pressed="false">5</button>
+        </div>
+        <button type="button" class="begin" id="begin">Begin</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <span class="section-label">To do</span>
+      <ul class="list" id="todo"></ul>
+    </section>
+
+    <section class="section" id="doneSection" hidden>
+      <span class="section-label">Done</span>
+      <ul class="list" id="done"></ul>
+    </section>
+  </div>
+</div>
+
+<div class="pause" id="pause" role="dialog" aria-modal="true" aria-label="Breathing session" hidden>
+  <span class="pause-eyebrow">Breathing &middot; <span id="pauseDur">1 minute</span></span>
+  <div class="orb-wrap" aria-hidden="true">
+    <span class="orb-halo"></span>
+    <span class="orb-ring"></span>
+    <span class="orb" id="orb"></span>
+  </div>
+  <span class="pause-phase" id="pausePhase" aria-live="polite">Breathe in</span>
+  <span class="pause-time" id="pauseTime">1:00</span>
+  <p class="pause-guide">Let the out-breath fall a little longer than the in-breath.</p>
+  <button type="button" class="pause-end" id="pauseEnd">End</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- model --------------------------------------------------------------
+  var PRIO_CYCLE = ['none', 'low', 'medium', 'high'];
+  var PRIO_RANK = { high: 0, medium: 1, low: 2, none: 3 };
+  var uid = 0;
+
+  function isoOffset(days) {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + days);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+  function todayISO() { return isoOffset(0); }
+
+  var tasks = [
+    { title: 'Draft the workshop outline',           priority: 'high',   due: isoOffset(1), done: false },
+    { title: 'Reply to Mara about the studio dates', priority: 'medium', due: isoOffset(0), done: false },
+    { title: 'Water the plants',                      priority: 'low',    due: isoOffset(0), done: false },
+    { title: 'Book a dentist appointment',            priority: 'medium', due: isoOffset(4), done: false },
+    { title: 'Morning pages',                         priority: 'none',   due: null,         done: true  },
+    { title: 'A short walk',                          priority: 'none',   due: null,         done: true  }
+  ].map(function (t, i) {
+    return { id: ++uid, order: i, completedAt: t.done ? i : null, title: t.title, priority: t.priority, due: t.due, done: t.done };
+  });
+
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function dueInfo(iso) {
+    if (!iso) return null;
+    var d = new Date(iso + 'T00:00:00');
+    var base = new Date();
+    base.setHours(0, 0, 0, 0);
+    var days = Math.round((d - base) / 86400000);
+    var text;
+    if (days === 0) text = 'Today';
+    else if (days === 1) text = 'Tomorrow';
+    else if (days === -1) text = 'Yesterday';
+    else if (days > 1 && days < 7) text = d.toLocaleDateString(undefined, { weekday: 'short' });
+    else text = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    var tone = days < 0 ? 'over' : (days <= 1 ? 'soon' : '');
+    return { text: text, tone: tone, days: days };
+  }
+
+  function sortTodo(a, b) {
+    var t = todayISO();
+    var ao = a.due && a.due < t, bo = b.due && b.due < t;
+    if (ao !== bo) return ao ? -1 : 1;
+    var ad = a.due || '9999-12-31', bd = b.due || '9999-12-31';
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    if (PRIO_RANK[a.priority] !== PRIO_RANK[b.priority]) return PRIO_RANK[a.priority] - PRIO_RANK[b.priority];
+    return a.order - b.order;
+  }
+
+  // ---- rendering --------------------------------------------------------
+  var CHECK_SVG = '<svg viewBox="0 0 12 12" fill="none" aria-hidden="true">' +
+    '<path d="M2.7 6.3 4.9 8.6 9.4 3.4" stroke="#F4F1E7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function makeRow(t) {
+    var li = document.createElement('li');
+    li.className = 'row' + (t.done ? ' done' : '');
+    li.setAttribute('data-id', String(t.id));
+
+    var check = document.createElement('button');
+    check.type = 'button';
+    check.className = 'check';
+    check.setAttribute('aria-pressed', String(t.done));
+    check.setAttribute('aria-label', (t.done ? 'Mark not done: ' : 'Complete: ') + t.title);
+    check.innerHTML = CHECK_SVG;
+    check.addEventListener('click', function () { toggleTask(t.id); });
+    li.appendChild(check);
+
+    var body = document.createElement('div');
+    body.className = 'body';
+    var title = document.createElement('span');
+    title.className = 'title';
+    title.textContent = t.title;
+    body.appendChild(title);
+
+    if (!t.done) {
+      var meta = document.createElement('div');
+      meta.className = 'meta';
+      var prio = document.createElement('button');
+      prio.type = 'button';
+      prio.className = 'prio';
+      prio.setAttribute('data-p', t.priority);
+      prio.setAttribute('aria-label', 'Priority: ' + t.priority + '. Tap to change.');
+      prio.innerHTML = '<span class="prio-dot"></span><span class="prio-label">' +
+        (t.priority === 'none' ? 'Priority' : cap(t.priority)) + '</span>';
+      prio.addEventListener('click', function () { cyclePriority(t.id, prio); });
+      meta.appendChild(prio);
+      body.appendChild(meta);
+    }
+    li.appendChild(body);
+
+    if (!t.done) {
+      var info = dueInfo(t.due);
+      var wrap = document.createElement('span');
+      wrap.className = 'due-wrap';
+      var due = document.createElement('span');
+      due.className = 'due ' + (info ? info.tone : 'empty');
+      due.textContent = info ? info.text : 'Add date';
+      var input = document.createElement('input');
+      input.type = 'date';
+      input.className = 'due-input';
+      input.value = t.due || '';
+      input.setAttribute('aria-label', 'Due date for ' + t.title);
+      input.addEventListener('change', function () { setDue(t.id, input.value || null); });
+      wrap.addEventListener('click', function () {
+        try { input.showPicker(); } catch (e) { input.focus(); }
+      });
+      wrap.appendChild(due);
+      wrap.appendChild(input);
+      li.appendChild(wrap);
+    }
+    return li;
+  }
+
+  var addingDraft = null;
+
+  function makeAddRow() {
+    var li = document.createElement('li');
+    li.className = 'row add';
+
+    if (!addingDraft) {
+      var check = document.createElement('span');
+      check.className = 'check';
+      var hint = document.createElement('span');
+      hint.className = 'add-hint';
+      hint.textContent = 'Add something for today';
+      li.appendChild(check);
+      li.appendChild(hint);
+      li.setAttribute('role', 'button');
+      li.setAttribute('tabindex', '0');
+      li.setAttribute('aria-label', 'Add a task');
+      var open = function () { addingDraft = { priority: 'none', due: null }; render(); focusAddInput(); };
+      li.addEventListener('click', open);
+      li.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
+      });
+      return li;
+    }
+
+    var slot = document.createElement('span');
+    slot.className = 'check';
+    li.appendChild(slot);
+
+    var form = document.createElement('form');
+    form.className = 'add-form';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'add-input';
+    input.placeholder = 'What needs doing?';
+    input.setAttribute('maxlength', '120');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('aria-label', 'New task');
+    form.appendChild(input);
+
+    var actions = document.createElement('div');
+    actions.className = 'add-actions';
+
+    var prio = document.createElement('button');
+    prio.type = 'button';
+    prio.className = 'prio';
+    prio.setAttribute('data-p', addingDraft.priority);
+    prio.setAttribute('aria-label', 'Set priority');
+    prio.innerHTML = '<span class="prio-dot"></span><span class="prio-label">' +
+      (addingDraft.priority === 'none' ? 'Priority' : cap(addingDraft.priority)) + '</span>';
+    prio.addEventListener('click', function () {
+      var next = PRIO_CYCLE[(PRIO_CYCLE.indexOf(addingDraft.priority) + 1) % PRIO_CYCLE.length];
+      addingDraft.priority = next;
+      prio.setAttribute('data-p', next);
+      prio.querySelector('.prio-label').textContent = next === 'none' ? 'Priority' : cap(next);
+    });
+
+    var dateWrap = document.createElement('span');
+    dateWrap.className = 'due-wrap';
+    var dateText = document.createElement('span');
+    dateText.className = 'due ' + (addingDraft.due ? '' : 'empty');
+    dateText.textContent = addingDraft.due ? dueInfo(addingDraft.due).text : 'Add date';
+    var dateInput = document.createElement('input');
+    dateInput.type = 'date';
+    dateInput.className = 'due-input';
+    dateInput.value = addingDraft.due || '';
+    dateInput.setAttribute('aria-label', 'Due date for new task');
+    dateInput.addEventListener('change', function () {
+      addingDraft.due = dateInput.value || null;
+      dateText.textContent = addingDraft.due ? dueInfo(addingDraft.due).text : 'Add date';
+      dateText.className = 'due ' + (addingDraft.due ? '' : 'empty');
+    });
+    dateWrap.addEventListener('click', function () {
+      try { dateInput.showPicker(); } catch (e) { dateInput.focus(); }
+    });
+    dateWrap.appendChild(dateText);
+    dateWrap.appendChild(dateInput);
+
+    var go = document.createElement('button');
+    go.type = 'submit';
+    go.className = 'add-go';
+    go.textContent = 'Add';
+
+    var cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'add-cancel';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', function () { addingDraft = null; render(); });
+
+    actions.appendChild(prio);
+    actions.appendChild(dateWrap);
+    actions.appendChild(go);
+    actions.appendChild(cancel);
+    form.appendChild(actions);
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var val = input.value.trim();
+      if (!val) { input.focus(); return; }
+      tasks.push({
+        id: ++uid, order: tasks.length, title: val,
+        priority: addingDraft.priority, due: addingDraft.due, done: false, completedAt: null
+      });
+      addingDraft = null;
+      render();
+    });
+    form.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { addingDraft = null; render(); }
+    });
+
+    li.appendChild(form);
+    return li;
+  }
+
+  function focusAddInput() {
+    var el = $('.add-input');
+    if (el) el.focus();
+  }
+
+  function render() {
+    var todo = tasks.filter(function (t) { return !t.done; }).slice().sort(sortTodo);
+    var done = tasks.filter(function (t) { return t.done; }).slice().sort(function (a, b) {
+      return (b.completedAt || 0) - (a.completedAt || 0);
+    });
+
+    var total = tasks.length;
+    var complete = done.length;
+
+    var beads = $('#beads');
+    beads.innerHTML = '';
+    if (total <= 14) {
+      for (var i = 0; i < total; i++) {
+        var b = document.createElement('span');
+        b.className = 'bead' + (i < complete ? ' on' : '');
+        beads.appendChild(b);
+      }
+    }
+    $('#count').textContent = complete + ' of ' + total + ' done';
+    var pr = $('#progress');
+    pr.setAttribute('aria-valuenow', String(complete));
+    pr.setAttribute('aria-valuemax', String(total));
+
+    var todoList = $('#todo');
+    todoList.innerHTML = '';
+    todo.forEach(function (t) { todoList.appendChild(makeRow(t)); });
+    todoList.appendChild(makeAddRow());
+
+    var doneSection = $('#doneSection');
+    var doneList = $('#done');
+    doneList.innerHTML = '';
+    if (done.length) {
+      doneSection.hidden = false;
+      done.forEach(function (t) { doneList.appendChild(makeRow(t)); });
+    } else {
+      doneSection.hidden = true;
+    }
+  }
+
+  // ---- task actions ---------------------------------------------------
+  function toggleTask(id) {
+    var t = findTask(id);
+    if (!t) return;
+    t.done = !t.done;
+    t.completedAt = t.done ? Date.now() : null;
+
+    var row = $('.row[data-id="' + id + '"]');
+    if (row && !reduceMotion) {
+      row.classList.toggle('done', t.done);
+      var c = row.querySelector('.check');
+      if (c) c.setAttribute('aria-pressed', String(t.done));
+      window.setTimeout(render, 280);
+    } else {
+      render();
+    }
+  }
+
+  function cyclePriority(id, el) {
+    var t = findTask(id);
+    if (!t) return;
+    t.priority = PRIO_CYCLE[(PRIO_CYCLE.indexOf(t.priority) + 1) % PRIO_CYCLE.length];
+    el.setAttribute('data-p', t.priority);
+    el.setAttribute('aria-label', 'Priority: ' + t.priority + '. Tap to change.');
+    el.querySelector('.prio-label').textContent = t.priority === 'none' ? 'Priority' : cap(t.priority);
+  }
+
+  function setDue(id, iso) {
+    var t = findTask(id);
+    if (!t) return;
+    t.due = iso;
+    render();
+  }
+
+  function findTask(id) {
+    for (var i = 0; i < tasks.length; i++) { if (tasks[i].id === id) return tasks[i]; }
+    return null;
+  }
+
+  // ---- breathing session ---------------------------------------------
+  var PATTERN = [
+    { name: 'Breathe in',  scale: 1,    ms: 4000 },
+    { name: 'Breathe out', scale: 0.58, ms: 6000 },
+    { name: 'Rest',        scale: 0.58, ms: 2000 }
+  ];
+  var selectedMinutes = 1;
+  var session = null;
+
+  function fmtClock(s) {
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function startBreathing(minutes) {
+    if (session) return;
+    var pause = $('#pause');
+    var orb = $('#orb');
+    var total = minutes * 60;
+    session = { left: total, phase: 0, clock: null, phaseTimer: null, lastFocus: document.activeElement };
+
+    $('#pauseDur').textContent = minutes + (minutes === 1 ? ' minute' : ' minutes');
+    $('#pausePhase').textContent = PATTERN[0].name;
+    $('#pauseTime').textContent = fmtClock(total);
+
+    orb.style.transition = 'none';
+    orb.style.transform = 'scale(0.58)';
+    void orb.offsetWidth;
+
+    pause.hidden = false;
+    document.body.style.overflow = 'hidden';
+    window.requestAnimationFrame(function () { pause.classList.add('show'); });
+    $('#pauseEnd').focus();
+
+    stepPhase();
+    session.clock = window.setInterval(function () {
+      session.left -= 1;
+      $('#pauseTime').textContent = fmtClock(Math.max(0, session.left));
+      if (session.left <= 0) endSession(true);
+    }, 1000);
+  }
+
+  function stepPhase() {
+    if (!session) return;
+    var orb = $('#orb');
+    var p = PATTERN[session.phase % PATTERN.length];
+    $('#pausePhase').textContent = p.name;
+    orb.style.transition = 'transform ' + (reduceMotion ? 600 : p.ms) + 'ms ease-in-out';
+    orb.style.transform = 'scale(' + p.scale + ')';
+    session.phase += 1;
+    session.phaseTimer = window.setTimeout(stepPhase, p.ms);
+  }
+
+  function endSession(completed) {
+    if (!session) return;
+    window.clearInterval(session.clock);
+    window.clearTimeout(session.phaseTimer);
+    var back = session.lastFocus;
+
+    if (completed && !reduceMotion) {
+      $('#pausePhase').textContent = 'Ease back in';
+      $('#pauseTime').textContent = '0:00';
+      var orb = $('#orb');
+      orb.style.transition = 'transform 1200ms ease';
+      orb.style.transform = 'scale(0.8)';
+      window.setTimeout(function () { closePause(back); }, 1500);
+    } else {
+      closePause(back);
+    }
+    session = null;
+  }
+
+  function closePause(back) {
+    var pause = $('#pause');
+    pause.classList.remove('show');
+    document.body.style.overflow = '';
+    window.setTimeout(function () { pause.hidden = true; }, 560);
+    if (back && typeof back.focus === 'function') back.focus();
+  }
+
+  // ---- wiring -------------------------------------------------------
+  var durs = document.querySelectorAll('.dur');
+  durs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      selectedMinutes = Number(btn.getAttribute('data-min'));
+      durs.forEach(function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+    });
+  });
+
+  function begin() { startBreathing(selectedMinutes); }
+  $('#begin').addEventListener('click', begin);
+  var bandRing = $('#bandRing');
+  bandRing.addEventListener('click', begin);
+  bandRing.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); begin(); }
+  });
+  $('#pauseEnd').addEventListener('click', function () { endSession(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && session) endSession(false);
+  });
+
+  // ---- init ------------------------------------------------------
+  var now = new Date();
+  $('#dateLine').textContent = now
+    .toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+    .replace(',', ' ·');
+
+  render();
+})();
+</script>
+</body>
+</html>
