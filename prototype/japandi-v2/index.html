@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MindfulTasks · Japandi v2</title>
+<meta name="description" content="Isolated Japandi prototype of the MindfulTasks dashboard. Runs standalone, no backend, state resets on reload.">
+<meta name="theme-color" content="#F3EFE6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Work+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="enso" aria-hidden="true"></div>
+
+  <div class="col">
+    <header>
+      <p class="eyebrow" id="dateLine">Today</p>
+      <h1 class="h1">Today</h1>
+    </header>
+
+    <div class="progress" id="progress" role="progressbar" aria-label="Tasks completed today" aria-valuemin="0">
+      <div class="beads" id="beads" aria-hidden="true"></div>
+      <span class="count" id="count"></span>
+    </div>
+
+    <section class="pause-band" aria-label="Guided breathing">
+      <span class="band-ring" id="bandRing" role="button" tabindex="0" aria-label="Begin a breathing pause"><i></i></span>
+      <div class="band-text">
+        <span class="eyebrow">Guided breathing</span>
+        <p class="band-invite">Take a slow minute before you begin.</p>
+      </div>
+      <div class="band-controls">
+        <div class="durations" role="group" aria-label="Session length">
+          <button type="button" class="dur" data-min="1" aria-pressed="true">1 min</button>
+          <button type="button" class="dur" data-min="3" aria-pressed="false">3</button>
+          <button type="button" class="dur" data-min="5" aria-pressed="false">5</button>
+        </div>
+        <button type="button" class="begin" id="begin">Begin</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <span class="section-label">To do</span>
+      <ul class="list" id="todo"></ul>
+    </section>
+
+    <section class="section" id="doneSection" hidden>
+      <span class="section-label">Done</span>
+      <ul class="list" id="done"></ul>
+    </section>
+  </div>
+</div>
+
+<div class="pause" id="pause" role="dialog" aria-modal="true" aria-label="Breathing session" hidden>
+  <span class="pause-eyebrow">Breathing &middot; <span id="pauseDur">1 minute</span></span>
+  <div class="orb-wrap" aria-hidden="true">
+    <span class="orb-halo"></span>
+    <span class="orb-ring"></span>
+    <span class="orb" id="orb"></span>
+  </div>
+  <span class="pause-phase" id="pausePhase" aria-live="polite">Breathe in</span>
+  <span class="pause-time" id="pauseTime">1:00</span>
+  <p class="pause-guide">Let the out-breath fall a little longer than the in-breath.</p>
+  <button type="button" class="pause-end" id="pauseEnd">End</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
