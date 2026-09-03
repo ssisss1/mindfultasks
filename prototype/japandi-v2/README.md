@@ -33,15 +33,20 @@ exercise, separate from the production React app and from
 ## Running it
 
 It must be **served over HTTP** (module imports + auth need a real origin —
-opening `index.html` as a `file://` will not work):
+opening `index.html` as a `file://` will not work). From this folder:
 
 ```bash
-npx serve prototype/japandi-v2
-# or
-python -m http.server 8000 --directory prototype/japandi-v2
+python -m http.server 8000      # then open http://localhost:8000
 ```
 
-Then open the printed URL and create an account.
+(`py -m http.server 8000` if `python` isn't on PATH.) Or, if your shell
+blocks `npx` (PowerShell execution policy), call the `.cmd`:
+
+```bash
+npx.cmd serve .
+```
+
+Then open the URL it prints and create an account.
 
 ## One-time Supabase setup (already done for this project)
 
