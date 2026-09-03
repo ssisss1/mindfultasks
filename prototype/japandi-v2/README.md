@@ -1,31 +1,39 @@
 # MindfulTasks — Japandi prototype (v2)
 
-A standalone, isolated visual prototype of the MindfulTasks **Today** dashboard
-in a Japandi aesthetic. Built for side-by-side comparison with the production
-React app — it is **not** part of that app and shares no code with it.
-
-## What it is
-
-The same dashboard experience as [`../dashboard.html`](../dashboard.html),
-split into separate files:
+A standalone Japandi-styled prototype of the MindfulTasks **Today** dashboard,
+with **Supabase** for sign-in and per-user task storage. Built as a learning
+exercise, separate from the production React app and from
+[`../dashboard.html`](../dashboard.html).
 
 | File | Purpose |
 |------|---------|
-| `index.html` | Markup / page structure |
-| `styles.css` | Japandi design system + component styles |
-| `app.js` | Task state, interactions, and the breathing-pause flow |
+| `index.html` | Page structure + the sign-in / sign-up panel |
+| `styles.css` | Japandi design system + auth styles |
+| `app.js` | Supabase client, auth flow, task CRUD, the breathing pause |
 | `README.md` | This file |
 
-`../dashboard.html` is the visual reference; `../../docs/BUILD_PLAN.md` and the
-original build spec are the functional reference.
+## How it stores data
 
-## How to run it
+- **Auth:** Supabase email + password. A logged-in session is kept by
+  `supabase-js` in the browser (survives refresh).
+- **Tasks:** one row per task in a Postgres table `public.tasks`, each row
+  owned by a `user_id`:
 
-**Option A — open directly:** double-click `index.html` (or open it in a
-browser). Everything works offline except the web fonts.
+  ```
+  id | user_id | title | priority | due_date | done | created_at
+  ```
 
-**Option B — serve the folder** (recommended; the native date picker and fonts
-behave most consistently over HTTP):
+- **Isolation:** Row-Level Security. Every query the browser makes is filtered
+  by `auth.uid() = user_id`, so a user only ever sees or changes their own
+  tasks. The Supabase URL and publishable key are hardcoded in `app.js` — that
+  is expected; they are browser keys and RLS is the security boundary. The
+  `service_role` key is never used.
+- The **breathing pause** is still in-memory only — it is not task data.
+
+## Running it
+
+It must be **served over HTTP** (module imports + auth need a real origin —
+opening `index.html` as a `file://` will not work):
 
 ```bash
 npx serve prototype/japandi-v2
@@ -33,30 +41,22 @@ npx serve prototype/japandi-v2
 python -m http.server 8000 --directory prototype/japandi-v2
 ```
 
-Then open the printed URL.
+Then open the printed URL and create an account.
 
-## What you can do
+## One-time Supabase setup (already done for this project)
 
-- **Tasks** — add, complete / un-complete. Tap a priority dot to cycle
-  none → low → medium → high. Tap a due date to pick one (relative labels:
-  Today / Tomorrow / weekday / date; a past date reads in clay). The list
-  sorts urgency-first (overdue → soonest due → higher priority).
-- **Progress** — the bead row and "X of Y done" update live.
-- **Guided breathing** — pick 1 / 3 / 5 minutes, press **Begin** (or tap the
-  ring). The screen gives way to a single orb pacing the breath
-  (in 4s · out 6s · rest 2s) with a phase cue and countdown. Ends on its own,
-  on **End**, or on Escape, and returns focus to where you were.
+1. **Table + policies** — applied as the migration `create_tasks_table`
+   on project `imhndydivpbqvxrhupox`.
+2. **Email confirmation off** — Supabase dashboard →
+   *Authentication → Sign In / Providers → Email → uncheck "Confirm email"* —
+   so sign-up logs you straight in without an email round-trip.
 
-## Data & isolation
+To point this at a different Supabase project, change `SUPABASE_URL` and
+`SUPABASE_KEY` at the top of `app.js` and re-run the migration there.
 
-- **In-memory only.** No `fetch`, no `localStorage`, no API. Reloading the page
-  resets to the seeded day.
-- **Not connected to Turso, Supabase, the production API, or any backend.**
-- Lives entirely under `prototype/japandi-v2/`. The production build
-  (`vite`, `src/`, `server/`) does not see this directory.
+## Scope
 
-## Known gaps vs. the build plan
-
-Matches `../dashboard.html` exactly, so it also omits: deleting a task, editing
-a task title, and a second breathing pattern. Those are in
-`../../docs/BUILD_PLAN.md` and can be added here if wanted.
+Same features as `../dashboard.html` (add / complete tasks, priority, due
+dates + urgency sort, bead progress, guided-breathing pause) — now persisted
+per account. Still no task delete or title editing (see
+`../../docs/BUILD_PLAN.md`).
